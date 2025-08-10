@@ -12,7 +12,7 @@ import java.util.List;
 public class Scanner {
     private final String source;
     private final List<Token> tokens = new ArrayList<>();
-    private int start = 0;
+    private int currentTokenStartOffset = 0;
     private int currentCharOffset = 0;
     private int line = 1;
 
@@ -22,7 +22,7 @@ public class Scanner {
 
     public List<Token> scanTokens() {
         while (!isAtEnd()) {
-            start = currentCharOffset; // hmmmm i dont thinks thats correct
+            currentTokenStartOffset = currentCharOffset;
             scanToken();
         }
         tokens.add(new Token(EOF, "", null, line));
@@ -34,7 +34,7 @@ public class Scanner {
     }
 
     private void scanToken() {
-        char currentChar = source.charAt(currentCharOffset);
+        char currentChar = getCurrentChar();
         switch (currentChar) {
             case '(':
                 addToken(LEFT_PAREN);
@@ -100,6 +100,10 @@ public class Scanner {
                 line++;
                 break;
             default:
+                if (charIsDigit(currentChar)) {
+                    addNumericLiteralToken();
+                }
+
                 String errorMsg = "Unexpected character \"" + currentChar + "\"";
                 Lox.error(line, errorMsg);
         }
@@ -116,20 +120,13 @@ public class Scanner {
     }
 
     private void addToken(TokenType type, Object literal) {
-        String text = source.substring(start, currentCharOffset);
+        String text = source.substring(currentTokenStartOffset, currentCharOffset);
         tokens.add(new Token(type, text, literal, line));
     }
 
     private boolean nextCharMatchesWith(char expected) {
-        int nextCharOffset = currentCharOffset + 1;
-
-        // Checks if next char is not the EOF
-        if (nextCharOffset >= source.length()) {
-            return false;
-        }
-
-        if (source.charAt(nextCharOffset) == expected) {
-            advanceCurrentCharOffset(); // Current should consider this char as one
+        if (lookAheadToNextChar() == expected) {
+            advanceCurrentCharOffset(); // If the next char is equal we expect, we consider that is a double char unique character (like != or ==) so we skip it
             return true;
         }
 
@@ -156,6 +153,53 @@ public class Scanner {
     }
 
     private void addStringLiteralToken() {
+        char nextChar = lookAheadToNextChar();
 
+        // This while iterate between the start of string (considering the first quote)
+        // until the last char before the closing quote.
+        while (nextChar != '\"' && !isAtEnd()) {
+            if (nextChar == '\n') {
+                line++;
+            }
+
+            advanceCurrentCharOffset();
+            nextChar = lookAheadToNextChar();
+        }
+
+        if (isAtEnd()) {
+            Lox.error(line, "Unterminated string.");
+        }
+
+        // Advance through the closing quote
+        advanceCurrentCharOffset();
+
+        // Note: `currentTokenStartOffset + 1` is to ignore the initial quote from the string and trim the string literal correctly
+        // This is a fucking flaw in my design of the lexer
+        String literalString = source.substring(currentTokenStartOffset + 1, currentCharOffset);
+        addToken(STRING, literalString);
+    }
+
+    private void addNumericLiteralToken() {
+        // Consume the integer part
+        while (charIsDigit(getCurrentChar())) {
+            advanceCurrentCharOffset();
+        }
+
+        // Validate if contains a fractional part
+        if (getCurrentChar() == '.' && charIsDigit(lookAheadToNextChar())) {
+            advanceCurrentCharOffset(); // necessary to consume the '.'
+
+            // Consume the fractional part
+            while (charIsDigit(getCurrentChar())) {
+                advanceCurrentCharOffset();
+            }
+        }
+
+        Double literalNumber = Double.valueOf(source.substring(currentTokenStartOffset, currentCharOffset));
+        addToken(NUMBER, literalNumber);
+    }
+
+    private boolean charIsDigit(char c) {
+        return (c >= '0' && c <= '9');
     }
 }

@@ -59,6 +59,7 @@ public class Lox {
     private static void run(String source) {
         Scanner scanner = new Scanner(source);
 
+        // Lexical Analysis
         List<Token> tokens = scanner.scanTokens();
 
         for (Token token : tokens) {
