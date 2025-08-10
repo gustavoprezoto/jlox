@@ -1,0 +1,43 @@
+### IntelliJ IDEA ###
+# Project-specific metadata and settings.
+# Do not commit this directory to version control.
+.idea/
+
+# Module files created by IntelliJ
+*.iml
+
+# Legacy IntelliJ project files (for older versions)
+*.ipr
+*.iws
+
+# Default build output directory for IntelliJ
+out/
+
+
+### Build Tool Output ###
+# Maven
+target/
+
+# Gradle
+build/
+.gradle/
+
+
+### Common Exclusions ###
+# Compiled class files
+*.class
+
+# Log files
+*.log
+
+# Packaged archives
+*.jar
+*.war
+*.ear
+
+# JVM crash logs
+hs_err_pid*
+replay_pid*
+
+# Local environment variables
+.env
