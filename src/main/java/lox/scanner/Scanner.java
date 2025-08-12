@@ -220,11 +220,11 @@ public class Scanner {
         }
 
         String identifierLiteral = source.substring(currentTokenStartOffset, currentCharOffset);
-        TokenType identifierType = keywords.get(identifierLiteral);
-        if (identifierType == null) {
-            identifierType = IDENTIFIER;
+        TokenType tokenType = keywords.get(identifierLiteral);
+        if (tokenType == null) {
+            tokenType = IDENTIFIER;
         }
-        addToken(identifierType, identifierLiteral);
+        addToken(tokenType, identifierLiteral);
     }
 
     private void addNumericLiteralToken() {
