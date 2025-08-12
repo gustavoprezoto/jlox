@@ -7,14 +7,37 @@ import lox.domain.TokenType;
 import static lox.domain.TokenType.*;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 
 public class Scanner {
     private final String source;
     private final List<Token> tokens = new ArrayList<>();
+    private static final Map<String, TokenType> keywords;
     private int currentTokenStartOffset = 0;
     private int currentCharOffset = 0;
     private int line = 1;
+
+    static {
+        keywords = new HashMap<>();
+        keywords.put("and", AND);
+        keywords.put("class", CLASS);
+        keywords.put("else", ELSE);
+        keywords.put("false", FALSE);
+        keywords.put("for", FOR);
+        keywords.put("fun", FUN);
+        keywords.put("if", IF);
+        keywords.put("nil", NIL);
+        keywords.put("or", OR);
+        keywords.put("print", PRINT);
+        keywords.put("return", RETURN);
+        keywords.put("super", SUPER);
+        keywords.put("this", THIS);
+        keywords.put("true", TRUE);
+        keywords.put("var", VAR);
+        keywords.put("while", WHILE);
+    }
 
     public Scanner(String source) {
         this.source = source;
@@ -91,7 +114,7 @@ public class Scanner {
             case ' ':
             case '\r':
             case '\t':
-                // Ignore whitespace.
+                // Ignore whitespaces
                 break;
             case '\"':
                 addStringLiteralToken();
@@ -102,6 +125,12 @@ public class Scanner {
             default:
                 if (charIsDigit(currentChar)) {
                     addNumericLiteralToken();
+                    break;
+                }
+
+                if (charIsAlphaOrUnderscore(currentChar)) {
+                    addIdentifierToken();
+                    break;
                 }
 
                 String errorMsg = "Unexpected character \"" + currentChar + "\"";
@@ -120,8 +149,14 @@ public class Scanner {
     }
 
     private void addToken(TokenType type, Object literal) {
-        String text = source.substring(currentTokenStartOffset, currentCharOffset);
-        tokens.add(new Token(type, text, literal, line));
+        String text;
+        int lexemeEndOffset = currentCharOffset;
+        if (type.equals(STRING)) {
+            lexemeEndOffset++;
+        }
+        text = source.substring(currentTokenStartOffset, lexemeEndOffset);
+        Token token = new Token(type, text, literal, line);
+        tokens.add(token);
     }
 
     private boolean nextCharMatchesWith(char expected) {
@@ -179,6 +214,19 @@ public class Scanner {
         addToken(STRING, literalString);
     }
 
+    private void addIdentifierToken() {
+        while (charIsAlphanumericOrUnderscore(getCurrentChar())) {
+            advanceCurrentCharOffset();
+        }
+
+        String identifierLiteral = source.substring(currentTokenStartOffset, currentCharOffset);
+        TokenType identifierType = keywords.get(identifierLiteral);
+        if (identifierType == null) {
+            identifierType = IDENTIFIER;
+        }
+        addToken(identifierType, identifierLiteral);
+    }
+
     private void addNumericLiteralToken() {
         // Consume the integer part
         while (charIsDigit(getCurrentChar())) {
@@ -201,5 +249,13 @@ public class Scanner {
 
     private boolean charIsDigit(char c) {
         return (c >= '0' && c <= '9');
+    }
+
+    private boolean charIsAlphaOrUnderscore(char c) {
+        return (c >= 'a' && c <= 'z') || (c >= 'A' && c <= 'Z') || (c == '_');
+    }
+
+    private boolean charIsAlphanumericOrUnderscore(char c) {
+        return charIsDigit(c) || charIsAlphaOrUnderscore(c);
     }
 }
