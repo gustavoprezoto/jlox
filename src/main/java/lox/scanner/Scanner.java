@@ -102,11 +102,10 @@ public class Scanner {
                 addToken(nextCharMatchesWith('=') ? GREATER_EQUAL : GREATER);
                 break;
             case '/':
-                if (nextCharMatchesWith('/')) {
-                    advanceCurrentCharOffset(); // Needed to ignore the second / in the comment
-                    while (lookAheadToNextChar() != '\n' && !isAtEnd()) { // We want to skip the last '\n', so it can go to it own (switch) case
-                        advanceCurrentCharOffset();
-                    }
+                boolean nextCharMatchesWithSlash = nextCharMatchesWith('/');
+                boolean nextCharMatchesWithStar = nextCharMatchesWith('*');
+                if (nextCharMatchesWithSlash || nextCharMatchesWithStar) {
+                    ignoreComments(nextCharMatchesWithStar);
                 } else {
                     addToken(SLASH);
                 }
@@ -151,7 +150,7 @@ public class Scanner {
     private void addToken(TokenType type, Object literal) {
         String text;
         int lexemeEndOffset = currentCharOffset;
-        if (type.equals(STRING)) {
+        if (type != NUMBER) {
             lexemeEndOffset++;
         }
         text = source.substring(currentTokenStartOffset, lexemeEndOffset);
@@ -184,7 +183,18 @@ public class Scanner {
             return '\0';
         }
 
-        return source.charAt(currentCharOffset + 1);
+        return source.charAt(nextCharOffset);
+    }
+
+    private char lookTwoCharsAhead() {
+        int nextCharOffset = currentCharOffset + 2;
+
+        // Checks if next char is not the EOF
+        if (nextCharOffset >= source.length()) {
+            return '\0';
+        }
+
+        return source.charAt(nextCharOffset);
     }
 
     private void addStringLiteralToken() {
@@ -216,10 +226,13 @@ public class Scanner {
 
     private void addIdentifierToken() {
         while (charIsAlphanumericOrUnderscore(getCurrentChar())) {
+            if (!charIsAlphanumericOrUnderscore(lookAheadToNextChar())) {
+                break;
+            }
             advanceCurrentCharOffset();
         }
 
-        String identifierLiteral = source.substring(currentTokenStartOffset, currentCharOffset);
+        String identifierLiteral = source.substring(currentTokenStartOffset, currentCharOffset + 1);
         TokenType tokenType = keywords.get(identifierLiteral);
         if (tokenType == null) {
             tokenType = IDENTIFIER;
@@ -230,6 +243,9 @@ public class Scanner {
     private void addNumericLiteralToken() {
         // Consume the integer part
         while (charIsDigit(getCurrentChar())) {
+            if (!charIsDigit(getCurrentChar())) {
+                break;
+            }
             advanceCurrentCharOffset();
         }
 
@@ -239,12 +255,36 @@ public class Scanner {
 
             // Consume the fractional part
             while (charIsDigit(getCurrentChar())) {
+                if (!charIsDigit(getCurrentChar())) {
+                    break;
+                }
                 advanceCurrentCharOffset();
             }
         }
 
         Double literalNumber = Double.valueOf(source.substring(currentTokenStartOffset, currentCharOffset));
         addToken(NUMBER, literalNumber);
+    }
+
+    private void ignoreComments(boolean isBlockComment) {
+        advanceCurrentCharOffset(); // Needed to ignore the second ('/' or '*') in the comment
+
+        if (isBlockComment) {
+            char lastChar = ' ';
+            char lastButOneChar = ' ';
+            while ((!("" + lastButOneChar + lastChar).equals("*/")) && !isAtEnd()) {
+                lastButOneChar = lastChar;
+                lastChar = getCurrentChar();
+                advanceCurrentCharOffset();
+            }
+
+            return;
+        }
+
+        // Simple comments
+        while (lookAheadToNextChar() != '\n' && !isAtEnd()) { // We want to skip the last '\n', so it can go to it own (switch) case
+            advanceCurrentCharOffset();
+        }
     }
 
     private boolean charIsDigit(char c) {

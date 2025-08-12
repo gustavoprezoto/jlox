@@ -1,2 +1,11 @@
 // Variables
+abc(
+13.14;
+/** comentário
+
+*****
+ ignorado */
+13.12(;
+print foo
+printfoo
 var language = "lox";
